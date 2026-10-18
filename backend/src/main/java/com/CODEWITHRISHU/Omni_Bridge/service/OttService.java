@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.core.authority.FactorGrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -41,21 +41,30 @@ public class OttService {
 
     @Transactional
     public void generateAndSendMagicLink(String email) {
-        userRepository.findByEmailIgnoreCase(email.trim()).ifPresent(user -> {
-            ottTokenRepository.deleteByUser(user);
+        var user = userRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Staff member not found. You are not authorized."));
 
-            String token = UUID.randomUUID().toString();
-            ottTokenRepository.save(OttToken.builder()
-                    .token(token)
-                    .expiresAt(Instant.now().plusSeconds(tokenExpirySeconds))
-                    .user(user)
-                    .build());
+        ottTokenRepository.deleteByUser(user);
 
-            String link = UriComponentsBuilder.fromUriString(frontendUrl)
-                    .path("/login").queryParam("token", token).toUriString();
-            mail.sendAsync(user.getEmail(), "Sign in to " + mail.appName(),
-                    mail.linkEmail(user.getName(), link, tokenExpirySeconds / 60));
-        });
+        String token = UUID.randomUUID().toString();
+        ottTokenRepository.save(OttToken.builder()
+                .token(token)
+                .expiresAt(Instant.now().plusSeconds(tokenExpirySeconds))
+                .user(user)
+                .build());
+
+        String link = UriComponentsBuilder.fromUriString(frontendUrl)
+                .path("/login").queryParam("token", token).toUriString();
+        
+        log.info("\n\n======================================================\n"
+               + "✨ DEV MODE - MAGIC LINK GENERATED:\n"
+               + "Email: {}\n"
+               + "Token: {}\n"
+               + "Link:  {}\n"
+               + "======================================================\n", user.getEmail(), token, link);
+
+        mail.sendAsync(user.getEmail(), "Sign in to " + mail.appName(),
+                mail.linkEmail(user.getName(), link, tokenExpirySeconds / 60));
     }
 
     @Transactional
@@ -70,7 +79,7 @@ public class OttService {
         var user = ott.getUser();
 
         List<String> factors = new ArrayList<>();
-        factors.add(FactorGrantedAuthority.OTT_AUTHORITY);
+        factors.add("OTT_AUTHORITY");
         if (otpRepository.existsByUserAndVerifiedTrueAndExpiresAtAfter(user, Instant.now())) {
             factors.add(JwtService.OTP_FACTOR);
         }
