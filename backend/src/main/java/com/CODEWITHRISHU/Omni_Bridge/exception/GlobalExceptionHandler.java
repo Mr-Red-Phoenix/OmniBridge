@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -132,6 +133,20 @@ public class GlobalExceptionHandler {
                 "Someone else just changed this incident. Refresh and try again.", request, Map.of());
     }
 
+    @ExceptionHandler(StaffNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleStaffNotFound(
+            StaffNotFoundException exception,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "Staff Not Found", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(
+            BadCredentialsException exception,
+            HttpServletRequest request) {
+        return error(HttpStatus.UNAUTHORIZED, "Invalid Credentials", exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException exception,
@@ -143,7 +158,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnexpected(
             Exception exception,
             HttpServletRequest request) {
-        log.error("Unhandled exception on {}", request.getRequestURI(), exception); // was swallowed silently
+        log.error("Unhandled exception on {}", request.getRequestURI(), exception);
         return error(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",

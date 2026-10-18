@@ -5,5 +5,9 @@ public enum IncidentType {
     FIRE,
     SECURITY,
     FACILITY,
+    PANIC,
+    ACTIVE_THREAT,
+    NATURAL_DISASTER,
+    HAZMAT,
     OTHER
 }

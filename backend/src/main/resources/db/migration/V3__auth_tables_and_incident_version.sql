@@ -23,7 +23,7 @@ CREATE INDEX idx_ott_expires ON ott_token(expires_at);
 CREATE TABLE refresh_tokens (
                                 id             BIGSERIAL PRIMARY KEY,
                                 refresh_token  VARCHAR(100) NOT NULL UNIQUE,
-                                factors        VARCHAR(200) NOT NULL DEFAULT '',   -- comma separated, restored on token refresh
+                                factors        VARCHAR(200) NOT NULL DEFAULT '',
                                 created_at     TIMESTAMPTZ  NOT NULL,
                                 expires_at     TIMESTAMPTZ  NOT NULL,
                                 user_id        BIGINT NOT NULL UNIQUE REFERENCES staff_user(id) ON DELETE CASCADE

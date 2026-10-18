@@ -17,4 +17,13 @@ public interface IncidentUpdateRepository
             order by u.createdAt asc
             """)
     List<IncidentUpdate> findTimeline(@Param("incidentId") Long incidentId);
+
+    @Query("""
+            select u from IncidentUpdate u
+            left join fetch u.author
+            where u.incident.id = :incidentId
+              and u.isPublicToGuest = true
+            order by u.createdAt asc
+            """)
+    List<IncidentUpdate> findPublicTimeline(@Param("incidentId") Long incidentId);
 }

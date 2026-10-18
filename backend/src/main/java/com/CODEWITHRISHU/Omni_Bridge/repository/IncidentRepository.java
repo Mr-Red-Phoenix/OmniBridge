@@ -25,15 +25,31 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     @Query("""
             select i from Incident i
             left join fetch i.assignedTo
-            where i.venue.id = :venueId
-            order by i.createdAt desc
+            where i.id = :id and i.venue.id = :venueId
             """)
-    List<Incident> findAllForVenue(@Param("venueId") Long venueId);
+    Optional<Incident> findByIdAndVenueId(@Param("id") Long id, @Param("venueId") Long venueId);
 
     @Query("""
             select i from Incident i
             left join fetch i.assignedTo
-            where i.id = :id and i.venue.id = :venueId
+            join fetch i.venue
+            where i.guestAccessToken = :guestAccessToken
             """)
-    Optional<Incident> findByIdAndVenueId(@Param("id") Long id, @Param("venueId") Long venueId);
+    Optional<Incident> findByGuestAccessToken(@Param("guestAccessToken") String guestAccessToken);
+
+    @Query("""
+            select i from Incident i
+            left join fetch i.assignedTo
+            join fetch i.venue
+            where i.id = :id and i.guestAccessToken = :guestAccessToken
+            """)
+    Optional<Incident> findByIdAndGuestAccessToken(@Param("id") Long id, @Param("guestAccessToken") String guestAccessToken);
+
+    @Query("""
+            select i from Incident i
+            left join fetch i.assignedTo
+            join fetch i.venue
+            where i.responderToken = :responderToken
+            """)
+    Optional<Incident> findByResponderToken(@Param("responderToken") String responderToken);
 }

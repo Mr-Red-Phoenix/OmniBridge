@@ -29,13 +29,25 @@ public class IncidentUpdate {
     @Column(nullable = false, length = 1000)
     private String message;
 
+    @Column(name = "is_public_to_guest", nullable = false)
+    private boolean isPublicToGuest = true;
+
+    @Column(name = "update_type", nullable = false, length = 30)
+    private String updateType = "NOTE";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     public IncidentUpdate(Incident incident, StaffUser author, String message) {
+        this(incident, author, message, true, "NOTE");
+    }
+
+    public IncidentUpdate(Incident incident, StaffUser author, String message, boolean isPublicToGuest, String updateType) {
         this.incident = incident;
         this.author = author;
         this.message = message;
+        this.isPublicToGuest = isPublicToGuest;
+        this.updateType = updateType != null ? updateType : "NOTE";
     }
 
     @PrePersist

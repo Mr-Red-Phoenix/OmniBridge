@@ -1,7 +1,9 @@
 package com.CODEWITHRISHU.Omni_Bridge.entity;
 
 public enum Role {
-    RESPONDER,
+    ADMIN,
+    COORDINATOR,
+    SECURITY,
     STAFF,
-    ADMIN
+    RESPONDER
 }

@@ -28,4 +28,16 @@ public class Venue {
 
     @Column(name = "emergency_instructions", nullable = false, length = 1000)
     private String emergencyInstructions;
+
+    @Column(name = "gate_code", length = 100)
+    private String gateCode;
+
+    @Column(name = "knox_box_location", length = 255)
+    private String knoxBoxLocation;
+
+    @Column(name = "floor_plan_url", length = 500)
+    private String floorPlanUrl;
+
+    @Column(name = "emergency_contact_phone", length = 50)
+    private String emergencyContactPhone;
 }
