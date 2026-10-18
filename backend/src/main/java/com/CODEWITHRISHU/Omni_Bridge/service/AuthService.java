@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,9 +30,9 @@ public class AuthService {
 
     private final StaffUserRepository repository;
     private final VenueRepository venueRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final OtpService otpService;
 
     @Value("${app.admin-key:}")
     private String adminKey;
@@ -51,18 +50,7 @@ public class AuthService {
 
     @Transactional
     public JwtResponse login(LoginRequest request) {
-        String cleanEmail = request.email().trim().toLowerCase();
-        StaffUser staff = repository.findByEmailIgnoreCase(cleanEmail)
-                .orElseThrow(() -> new StaffNotFoundException("Staff user not found in database with email: " + cleanEmail));
-
-        if (!passwordEncoder.matches(request.password(), staff.getPasswordHash())) {
-            throw new BadCredentialsException("Invalid password for staff user: " + cleanEmail);
-        }
-
-        var refresh = refreshTokenService.createRefreshToken(staff, List.of());
-        String accessToken = jwtService.generateToken(staff);
-
-        return buildJwtResponse(staff, accessToken, refresh.getToken());
+        throw new BadCredentialsException("Password-based authentication is no longer supported. Please authenticate using OTP and Magic Link MFA.");
     }
 
     @Transactional
@@ -72,13 +60,14 @@ public class AuthService {
             throw new UserAlreadyExists("Staff already exists in database with email: " + email);
         }
 
+        otpService.validateAndConsumeRegistrationOtp(email, request.otp());
+
         var venue = venueRepository.findBySlug(request.venueSlug().trim())
                 .orElseThrow(() -> new VenueNotFoundException(request.venueSlug()));
 
         var user = new StaffUser();
         user.setName(request.name().trim());
         user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(resolveRole(request.role(), request.adminKey()));
         user.setVenue(venue);
 

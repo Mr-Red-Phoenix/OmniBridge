@@ -3,7 +3,6 @@ package com.CODEWITHRISHU.Omni_Bridge.entity.incident;
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -12,8 +11,9 @@ import java.time.Instant;
 @Table(name = "incident_update")
 @Getter
 @Setter
-@NoArgsConstructor
 public class IncidentUpdate {
+    public IncidentUpdate() {
+    }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

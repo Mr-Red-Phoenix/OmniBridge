@@ -3,16 +3,17 @@ package com.CODEWITHRISHU.Omni_Bridge.entity.staff;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Table(name = "venue")
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
 public class Venue {
+    public Venue() {
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

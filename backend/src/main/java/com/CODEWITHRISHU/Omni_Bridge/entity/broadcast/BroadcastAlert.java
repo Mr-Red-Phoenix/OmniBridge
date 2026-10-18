@@ -4,7 +4,6 @@ import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.Venue;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -13,8 +12,9 @@ import java.time.Instant;
 @Table(name = "broadcast_alert")
 @Getter
 @Setter
-@NoArgsConstructor
 public class BroadcastAlert {
+    public BroadcastAlert() {
+    }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

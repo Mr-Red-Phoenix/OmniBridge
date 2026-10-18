@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.ott.OneTimeToken;
@@ -15,6 +16,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class MagicLinkOttGenerationSuccessHandler implements OneTimeTokenGenerationSuccessHandler {
 
@@ -32,8 +34,18 @@ public class MagicLinkOttGenerationSuccessHandler implements OneTimeTokenGenerat
     public void handle(HttpServletRequest request, HttpServletResponse response, OneTimeToken oneTimeToken)
             throws IOException, ServletException {
         String email = oneTimeToken.getUsername();
+        String token = oneTimeToken.getTokenValue();
         String link = UriComponentsBuilder.fromUriString(frontendUrl)
-                .path("/login").queryParam("token", oneTimeToken.getTokenValue()).toUriString();
+                .path("/login").queryParam("token", token).toUriString();
+
+        log.info("\n=======================================================\n"
+                + ">>> [AUTH-DEV] SPRING SECURITY OTT MAGIC LINK GENERATED\n"
+                + ">>> User Email: {}\n"
+                + ">>> Original Magic Link Token: {}\n"
+                + ">>> Magic Link URL: {}\n"
+                + ">>> Expires In: {} seconds\n"
+                + "=======================================================",
+                email, token, link, expirySeconds);
 
         mail.sendAsync(email, "Sign in to " + mail.appName(), mail.linkEmail(email, link, expirySeconds / 60));
 

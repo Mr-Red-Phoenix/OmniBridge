@@ -15,11 +15,17 @@ import java.util.Optional;
 public interface OtpVerificationRepository extends JpaRepository<OtpVerification, Long> {
     Optional<OtpVerification> findTopByUserAndVerifiedFalseOrderByCreatedAtDesc(StaffUser user);
 
+    Optional<OtpVerification> findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(String email);
+
     boolean existsByUserAndVerifiedTrueAndExpiresAtAfter(StaffUser user, Instant now);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from OtpVerification o where o.user = :user")
     void deleteAllForUser(@Param("user") StaffUser user);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from OtpVerification o where lower(o.email) = lower(:email)")
+    void deleteAllByEmailIgnoreCase(@Param("email") String email);
 
     @Modifying
     @Query("delete from OtpVerification o where o.expiresAt < :now")

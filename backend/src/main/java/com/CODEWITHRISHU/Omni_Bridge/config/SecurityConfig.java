@@ -3,7 +3,6 @@ package com.CODEWITHRISHU.Omni_Bridge.config;
 import com.CODEWITHRISHU.Omni_Bridge.handler.JwtAuthFilter;
 import com.CODEWITHRISHU.Omni_Bridge.handler.MagicLinkOttGenerationSuccessHandler;
 import com.CODEWITHRISHU.Omni_Bridge.handler.RateLimitFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +34,6 @@ import java.util.Map;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -43,6 +41,11 @@ public class SecurityConfig {
     private final RateLimitFilter rateLimitFilter;
     @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    public SecurityConfig(UserDetailsService userDetailsService, RateLimitFilter rateLimitFilter) {
+        this.userDetailsService = userDetailsService;
+        this.rateLimitFilter = rateLimitFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,

@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Full Stack (Backend + Frontend)",
+      "request": "launch",
+      "mainClass": "com.CODEWITHRISHU.Omni_Bridge.OmniBridgeApplication",
+      "projectName": "Omni_Bridge",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "preLaunchTask": "Start Frontend",
+      "noDebug": true
+    },
+    {
+      "type": "java",
+      "name": "OmniBridge (Backend)",
+      "request": "launch",
+      "mainClass": "com.CODEWITHRISHU.Omni_Bridge.OmniBridgeApplication",
+      "projectName": "Omni_Bridge",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "noDebug": true
+    },
+    {
+      "type": "java",
+      "name": "OmniBridge (Backend - Debug Mode)",
+      "request": "launch",
+      "mainClass": "com.CODEWITHRISHU.Omni_Bridge.OmniBridgeApplication",
+      "projectName": "Omni_Bridge",
+      "envFile": "${workspaceFolder}/backend/.env"
+    }
+  ]
+}

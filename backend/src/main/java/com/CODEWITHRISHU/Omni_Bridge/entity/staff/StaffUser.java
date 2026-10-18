@@ -3,7 +3,6 @@ package com.CODEWITHRISHU.Omni_Bridge.entity.staff;
 import com.CODEWITHRISHU.Omni_Bridge.entity.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,8 +15,10 @@ import java.util.List;
 @Table(name = "staff_user")
 @Getter
 @Setter
-@NoArgsConstructor
 public class StaffUser implements UserDetails {
+    public StaffUser() {
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,9 +28,6 @@ public class StaffUser implements UserDetails {
 
     @Column(nullable = false, unique = true, length = 254)
     private String email;
-
-    @Column(name = "password_hash", nullable = false, length = 100)
-    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -52,7 +50,7 @@ public class StaffUser implements UserDetails {
 
     @Override
     public String getPassword() {
-        return passwordHash;
+        return "";
     }
 
     @Override

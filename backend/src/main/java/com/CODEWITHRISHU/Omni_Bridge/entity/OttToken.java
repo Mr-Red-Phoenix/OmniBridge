@@ -10,10 +10,12 @@ import java.time.Instant;
 @Table(name = "ott_token")
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class OttToken {
+
+    public OttToken() {
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

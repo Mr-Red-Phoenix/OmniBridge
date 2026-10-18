@@ -11,12 +11,16 @@ import java.time.Instant;
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class OtpVerification {
+    public OtpVerification() {
+    }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "email", length = 254)
+    private String email;
 
     @Column(nullable = false)
     private String phone;
@@ -30,8 +34,8 @@ public class OtpVerification {
     @Column(nullable = false)
     private int attempts;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true)
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private StaffUser user;
 
     @Column(name = "created_at")

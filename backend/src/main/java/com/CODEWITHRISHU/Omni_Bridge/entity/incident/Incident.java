@@ -14,9 +14,10 @@ import java.time.Instant;
 @Table(name = "incident")
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
 public class Incident {
+    public Incident() {
+    }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

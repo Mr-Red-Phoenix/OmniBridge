@@ -25,6 +25,12 @@ public class OtpController {
         return ResponseEntity.ok(otpService.sendOtp(request));
     }
 
+    @PostMapping("/send-registration")
+    public ResponseEntity<OtpResponse> sendRegistrationOtp(@Valid @RequestBody OtpRequest request) {
+        log.info("Sending registration OTP to email: {}", request.email());
+        return ResponseEntity.ok(otpService.sendRegistrationOtp(request));
+    }
+
     @PostMapping("/verify")
     public ResponseEntity<OtpResponse> verifyOtp(@Valid @RequestBody OtpRequest request) {
         log.info("Verifying OTP");

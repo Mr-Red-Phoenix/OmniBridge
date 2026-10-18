@@ -41,28 +41,54 @@ public class OttService {
 
     @Transactional
     public void generateAndSendMagicLink(String email) {
-        userRepository.findByEmailIgnoreCase(email.trim()).ifPresent(user -> {
-            ottTokenRepository.deleteByUser(user);
+        String cleanEmail = email.trim();
+        var userOptional = userRepository.findByEmailIgnoreCase(cleanEmail);
+        if (userOptional.isEmpty()) {
+            log.warn("\n=======================================================\n"
+                    + ">>> [AUTH-DEV] MAGIC LINK REQUEST FAILED (USER NOT FOUND)\n"
+                    + ">>> Email: {}\n"
+                    + "=======================================================", cleanEmail);
+            return;
+        }
 
-            String token = UUID.randomUUID().toString();
-            ottTokenRepository.save(OttToken.builder()
-                    .token(token)
-                    .expiresAt(Instant.now().plusSeconds(tokenExpirySeconds))
-                    .user(user)
-                    .build());
+        var user = userOptional.get();
+        ottTokenRepository.deleteByUser(user);
 
-            String link = UriComponentsBuilder.fromUriString(frontendUrl)
-                    .path("/login").queryParam("token", token).toUriString();
-            mail.sendAsync(user.getEmail(), "Sign in to " + mail.appName(),
-                    mail.linkEmail(user.getName(), link, tokenExpirySeconds / 60));
-        });
+        String token = UUID.randomUUID().toString();
+        Instant expiresAt = Instant.now().plusSeconds(tokenExpirySeconds);
+        ottTokenRepository.save(OttToken.builder()
+                .token(token)
+                .expiresAt(expiresAt)
+                .user(user)
+                .build());
+
+        String link = UriComponentsBuilder.fromUriString(frontendUrl)
+                .path("/login").queryParam("token", token).toUriString();
+
+        log.info("\n=======================================================\n"
+                + ">>> [AUTH-DEV] MAGIC LINK GENERATED\n"
+                + ">>> User Email: {}\n"
+                + ">>> Original Magic Link Token: {}\n"
+                + ">>> Magic Link URL: {}\n"
+                + ">>> Expires At: {}\n"
+                + "=======================================================",
+                user.getEmail(), token, link, expiresAt);
+
+        mail.sendAsync(user.getEmail(), "Sign in to " + mail.appName(),
+                mail.linkEmail(user.getName(), link, tokenExpirySeconds / 60));
     }
 
     @Transactional
     public JwtResponse loginWithOttToken(String token) {
+        log.info("\n=======================================================\n"
+                + ">>> [AUTH-DEV] MAGIC LINK LOGIN ATTEMPT\n"
+                + ">>> Submitted Token: {}\n"
+                + "=======================================================", token);
+
         var ott = ottTokenRepository.findByToken(token)
                 .orElseThrow(() -> new IllegalArgumentException(INVALID_LINK));
         if (ott.getExpiresAt().isBefore(Instant.now())) {
+            log.warn(">>> [AUTH-DEV] MAGIC LINK LOGIN FAILED: TOKEN EXPIRED");
             throw new IllegalArgumentException(INVALID_LINK);
         }
         ottTokenRepository.delete(ott);
@@ -74,6 +100,13 @@ public class OttService {
         if (otpRepository.existsByUserAndVerifiedTrueAndExpiresAtAfter(user, Instant.now())) {
             factors.add(JwtService.OTP_FACTOR);
         }
+
+        log.info("\n=======================================================\n"
+                + ">>> [AUTH-DEV] MAGIC LINK LOGIN SUCCESSFUL\n"
+                + ">>> User Email: {}\n"
+                + ">>> Granted Factors: {}\n"
+                + "=======================================================",
+                user.getEmail(), factors);
 
         return JwtResponse.builder()
                 .accessToken(jwtService.generateMfaToken(user, factors))

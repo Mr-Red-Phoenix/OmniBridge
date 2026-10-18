@@ -1,0 +1,75 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Frontend",
+            "type": "shell",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*(VITE|ready in).*",
+                    "endsPattern": "Local:\\s+http"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": false
+            }
+        },
+        {
+            "label": "Start Backend (Maven)",
+            "type": "shell",
+            "command": ".\\mvnw.cmd spring-boot:run",
+            "windows": {
+                "command": ".\\mvnw.cmd spring-boot:run"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/backend",
+                "env": {
+                    "JAVA_HOME": "C:\\Program Files\\Java\\jdk-25",
+                    "DB_PASSWORD": "RishabhGupta&2005@"
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*(OmniBridgeApplication|Spring Boot).*",
+                    "endsPattern": ".*Started OmniBridgeApplication.*"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": false
+            }
+        },
+        {
+            "label": "Run Both (Backend + Frontend)",
+            "dependsOn": [
+                "Start Backend (Maven)",
+                "Start Frontend"
+            ],
+            "dependsOrder": "parallel",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
