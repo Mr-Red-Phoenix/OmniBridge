@@ -2,8 +2,9 @@ package com.CODEWITHRISHU.Omni_Bridge.entity;
 
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import jakarta.persistence.*;
-import lombok.*;
-
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -12,10 +13,18 @@ import java.util.List;
 @Table(name = "refresh_tokens")
 @Getter
 @Setter
-@AllArgsConstructor
-@Builder
 public class RefreshToken {
     public RefreshToken() {
+    }
+
+    @Builder
+    public RefreshToken(Long id, String token, String factors, Instant createdAt, Instant expiresAt, StaffUser userInfo) {
+        this.id = id;
+        this.token = token;
+        this.factors = factors != null ? factors : "";
+        this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
+        this.userInfo = userInfo;
     }
 
     @Id
@@ -25,7 +34,6 @@ public class RefreshToken {
     @Column(name = "refresh_token", nullable = false, unique = true)
     private String token;
 
-    @Builder.Default
     @Column(nullable = false, length = 200)
     private String factors = "";
 

@@ -2,7 +2,9 @@ package com.CODEWITHRISHU.Omni_Bridge.entity;
 
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 
@@ -10,11 +12,18 @@ import java.time.Instant;
 @Table(name = "ott_token")
 @Getter
 @Setter
-@AllArgsConstructor
-@Builder
 public class OttToken {
 
     public OttToken() {
+    }
+
+    @Builder
+    public OttToken(Long id, String token, Instant createdAt, Instant expiresAt, StaffUser user) {
+        this.id = id;
+        this.token = token;
+        this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
+        this.user = user;
     }
 
     @Id

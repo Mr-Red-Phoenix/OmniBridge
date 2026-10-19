@@ -3,9 +3,7 @@ package com.CODEWITHRISHU.Omni_Bridge.entity.incident;
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.Venue;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -14,7 +12,6 @@ import java.time.Instant;
 @Table(name = "incident")
 @Getter
 @Setter
-@AllArgsConstructor
 public class Incident {
     public Incident() {
     }

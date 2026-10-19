@@ -1,7 +1,6 @@
 package com.CODEWITHRISHU.Omni_Bridge.entity.staff;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,9 +8,20 @@ import lombok.Setter;
 @Table(name = "venue")
 @Getter
 @Setter
-@AllArgsConstructor
 public class Venue {
     public Venue() {
+    }
+
+    public Venue(Long id, String name, String slug, String address, String emergencyInstructions, String gateCode, String knoxBoxLocation, String floorPlanUrl, String emergencyContactPhone) {
+        this.id = id;
+        this.name = name;
+        this.slug = slug;
+        this.address = address;
+        this.emergencyInstructions = emergencyInstructions;
+        this.gateCode = gateCode;
+        this.knoxBoxLocation = knoxBoxLocation;
+        this.floorPlanUrl = floorPlanUrl;
+        this.emergencyContactPhone = emergencyContactPhone;
     }
 
     @Id
