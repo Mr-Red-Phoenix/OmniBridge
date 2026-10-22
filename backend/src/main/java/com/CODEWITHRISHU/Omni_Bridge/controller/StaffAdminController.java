@@ -33,5 +33,16 @@ public class StaffAdminController {
         return ResponseEntity.ok(authService.updateStaffRole(userId, request.role()));
     }
 
+    @PutMapping("/{userId}/approve")
+    public ResponseEntity<StaffSummaryResponse> approveStaffUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(authService.approveStaffUser(userId));
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> deleteStaffUser(@PathVariable Long userId) {
+        authService.deleteStaffUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+
 }
 

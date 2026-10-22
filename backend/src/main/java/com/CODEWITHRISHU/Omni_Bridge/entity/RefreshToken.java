@@ -2,7 +2,6 @@ package com.CODEWITHRISHU.Omni_Bridge.entity;
 
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.Instant;
@@ -17,7 +16,6 @@ public class RefreshToken {
     public RefreshToken() {
     }
 
-    @Builder
     public RefreshToken(Long id, String token, String factors, Instant createdAt, Instant expiresAt, StaffUser userInfo) {
         this.id = id;
         this.token = token;
@@ -25,6 +23,53 @@ public class RefreshToken {
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
         this.userInfo = userInfo;
+    }
+
+    public static RefreshTokenBuilder builder() {
+        return new RefreshTokenBuilder();
+    }
+
+    public static class RefreshTokenBuilder {
+        private Long id;
+        private String token;
+        private String factors = "";
+        private Instant createdAt;
+        private Instant expiresAt;
+        private StaffUser userInfo;
+
+        public RefreshTokenBuilder id(Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public RefreshTokenBuilder token(String token) {
+            this.token = token;
+            return this;
+        }
+
+        public RefreshTokenBuilder factors(String factors) {
+            this.factors = factors != null ? factors : "";
+            return this;
+        }
+
+        public RefreshTokenBuilder createdAt(Instant createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public RefreshTokenBuilder expiresAt(Instant expiresAt) {
+            this.expiresAt = expiresAt;
+            return this;
+        }
+
+        public RefreshTokenBuilder userInfo(StaffUser userInfo) {
+            this.userInfo = userInfo;
+            return this;
+        }
+
+        public RefreshToken build() {
+            return new RefreshToken(id, token, factors, createdAt, expiresAt, userInfo);
+        }
     }
 
     @Id

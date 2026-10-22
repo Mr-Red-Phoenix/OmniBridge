@@ -63,12 +63,15 @@ public class SecurityConfig {
                                 "/api/venues/**",
                                 "/api/ott/**",
                                 "/api/otp/**",
+                                "/api/v1/triage/public/**",
+                                "/ws/**",
+                                "/ws/triage/**",
                                 "/actuator/health/**",
                                 "/favicon.ico",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/staff/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/staff/**").hasAnyRole("STAFF", "SECURITY", "COORDINATOR", "ADMIN")
+                        .requestMatchers("/api/staff/**").hasAnyRole("STAFF", "DOCTOR", "SECURITY", "COORDINATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -8,6 +8,7 @@ public record StaffSummaryResponse(
         String name,
         String email,
         Role role,
+        String status,
         Long venueId,
         String venueName,
         String venueSlug) {
@@ -18,6 +19,7 @@ public record StaffSummaryResponse(
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
+                user.getStatus() != null ? user.getStatus() : "APPROVED",
                 user.getVenue().getId(),
                 user.getVenue().getName(),
                 user.getVenue().getSlug());

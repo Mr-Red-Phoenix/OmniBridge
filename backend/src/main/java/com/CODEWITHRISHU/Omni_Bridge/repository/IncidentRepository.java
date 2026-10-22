@@ -52,4 +52,12 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
             where i.responderToken = :responderToken
             """)
     Optional<Incident> findByResponderToken(@Param("responderToken") String responderToken);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Incident i set i.assignedTo = null where i.assignedTo = :staff")
+    void unassignStaffUser(@Param("staff") com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser staff);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Incident i set i.verifiedBy = null where i.verifiedBy = :staff")
+    void nullifyVerifiedBy(@Param("staff") com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser staff);
 }

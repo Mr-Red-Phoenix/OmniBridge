@@ -11,6 +11,13 @@ import com.CODEWITHRISHU.Omni_Bridge.exception.StaffNotFoundException;
 import com.CODEWITHRISHU.Omni_Bridge.exception.UserAlreadyExists;
 import com.CODEWITHRISHU.Omni_Bridge.exception.VenueNotFoundException;
 import com.CODEWITHRISHU.Omni_Bridge.repository.StaffUserRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.IncidentRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.IncidentUpdateRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.BroadcastAlertRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.PatientIntakeRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.OtpVerificationRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.OttTokenRepository;
+import com.CODEWITHRISHU.Omni_Bridge.repository.RefreshTokenRepository;
 import com.CODEWITHRISHU.Omni_Bridge.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +40,13 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final OtpService otpService;
+    private final IncidentRepository incidentRepository;
+    private final IncidentUpdateRepository incidentUpdateRepository;
+    private final BroadcastAlertRepository broadcastAlertRepository;
+    private final PatientIntakeRepository patientIntakeRepository;
+    private final OtpVerificationRepository otpVerificationRepository;
+    private final OttTokenRepository ottTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Value("${app.admin-key:}")
     private String adminKey;
@@ -68,10 +82,33 @@ public class AuthService {
         var user = new StaffUser();
         user.setName(request.name().trim());
         user.setEmail(email);
-        user.setRole(resolveRole(request.role(), request.adminKey()));
+        Role resolvedRole = resolveRole(request.role(), request.adminKey());
+        user.setRole(resolvedRole);
         user.setVenue(venue);
 
+        // Security rule: Primary Admin is auto-approved; all other new staff registrants require Admin approval
+        boolean isPrimaryAdmin = "admin@omnibridge.org".equalsIgnoreCase(email) || resolvedRole == Role.ADMIN;
+        user.setStatus(isPrimaryAdmin ? "APPROVED" : "PENDING");
+
         StaffUser saved = repository.save(user);
+
+        if (!isPrimaryAdmin) {
+            log.info("Registered staff applicant id={}, role={}, venue={} (STATUS: PENDING ADMIN APPROVAL)",
+                    saved.getId(), saved.getRole(), venue.getSlug());
+            // Return response indicating pending approval (no active session tokens issued)
+            return JwtResponse.builder()
+                    .accessToken(null)
+                    .refreshToken(null)
+                    .id(saved.getId())
+                    .name(saved.getName())
+                    .email(saved.getEmail())
+                    .role(saved.getRole())
+                    .venueId(venue.getId())
+                    .venueName(venue.getName())
+                    .venueSlug(venue.getSlug())
+                    .build();
+        }
+
         var refresh = refreshTokenService.createRefreshToken(saved, List.of());
         String accessToken = jwtService.generateToken(saved);
 
@@ -87,11 +124,57 @@ public class AuthService {
     }
 
     @Transactional
+    public StaffSummaryResponse approveStaffUser(Long staffId) {
+        StaffUser staff = repository.findById(staffId)
+                .orElseThrow(() -> new StaffNotFoundException("Staff user not found with id: " + staffId));
+
+        staff.setStatus("APPROVED");
+        StaffUser saved = repository.save(staff);
+        log.info("Admin approved staff user id={}, email={}, role={}", saved.getId(), saved.getEmail(), saved.getRole());
+        return StaffSummaryResponse.from(saved);
+    }
+
+    @Transactional
     public StaffSummaryResponse updateStaffRole(Long staffId, Role newRole) {
         StaffUser staff = repository.findById(staffId)
                 .orElseThrow(() -> new StaffNotFoundException("Staff user not found with id: " + staffId));
+
+        if ("admin@omnibridge.org".equalsIgnoreCase(staff.getEmail())) {
+            throw new IllegalArgumentException("The primary Admin account (admin@omnibridge.org) role is immutable.");
+        }
+
+        if (newRole == Role.ADMIN) {
+            throw new IllegalArgumentException("Only admin@omnibridge.org can hold the ADMIN role.");
+        }
+
         staff.setRole(newRole);
         return StaffSummaryResponse.from(repository.save(staff));
+    }
+
+    @Transactional
+    public void deleteStaffUser(Long staffId) {
+        StaffUser staff = repository.findById(staffId)
+                .orElseThrow(() -> new StaffNotFoundException("Staff user not found with id: " + staffId));
+
+        if ("admin@omnibridge.org".equalsIgnoreCase(staff.getEmail())) {
+            throw new IllegalArgumentException("Cannot remove the primary system Admin account (admin@omnibridge.org).");
+        }
+
+        // 1. Clean auth session tokens
+        ottTokenRepository.deleteByUser(staff);
+        refreshTokenRepository.deleteByUserInfo(staff);
+        otpVerificationRepository.deleteAllForUser(staff);
+
+        // 2. Nullify assignments/authorship to maintain operational history without foreign key violations
+        incidentRepository.unassignStaffUser(staff);
+        incidentRepository.nullifyVerifiedBy(staff);
+        incidentUpdateRepository.nullifyAuthor(staff);
+        broadcastAlertRepository.nullifyAuthor(staff);
+        patientIntakeRepository.nullifyAssignedDoctor(staff);
+
+        // 3. Remove user
+        repository.delete(staff);
+        log.info("Successfully removed staff user id={}, email={}", staffId, staff.getEmail());
     }
 
     public JwtResponse buildJwtResponse(StaffUser user, String accessToken, String refreshToken) {

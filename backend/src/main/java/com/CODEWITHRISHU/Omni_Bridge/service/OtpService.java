@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import com.CODEWITHRISHU.Omni_Bridge.exception.UserAlreadyExists;
+import com.CODEWITHRISHU.Omni_Bridge.exception.StaffNotFoundException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,13 +76,18 @@ public class OtpService {
         var userOpt = userRepository.findByEmailIgnoreCase(cleanEmail);
         if (userOpt.isEmpty()) {
             log.warn("\n=======================================================\n"
-                    + ">>> [AUTH-DEV] OTP REQUEST FAILED (USER NOT FOUND)\n"
+                    + ">>> [AUTH-DEV] OTP REQUEST REJECTED (STAFF NOT REGISTERED)\n"
                     + ">>> Email: {}\n"
                     + "=======================================================", cleanEmail);
-            return new OtpResponse(true, SENT, expiresAt);
+            throw new StaffNotFoundException("No registered staff member found with email: " + cleanEmail);
         }
 
         var user = userOpt.get();
+        if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
+            log.warn(">>> [AUTH-DEV] OTP REQUEST REJECTED (ACCOUNT PENDING APPROVAL): {}", cleanEmail);
+            throw new BadCredentialsException("Your account is currently pending Administrator approval. Please contact your facility Admin.");
+        }
+
         otpRepository.deleteAllForUser(user);
         otpRepository.deleteAllByEmailIgnoreCase(cleanEmail);
 
@@ -94,6 +100,10 @@ public class OtpService {
                 .expiresAt(expiresAt)
                 .user(user)
                 .build());
+
+        System.out.println("\n*******************************************************");
+        System.out.println(">>> [OTP CODE] " + code + " (Email: " + cleanEmail + ")");
+        System.out.println("*******************************************************\n");
 
         log.info("\n=======================================================\n"
                 + ">>> [AUTH-DEV] LOGIN OTP GENERATED\n"
@@ -133,6 +143,10 @@ public class OtpService {
                 .expiresAt(expiresAt)
                 .user(null)
                 .build());
+
+        System.out.println("\n*******************************************************");
+        System.out.println(">>> [REGISTRATION OTP CODE] " + code + " (Email: " + cleanEmail + ")");
+        System.out.println("*******************************************************\n");
 
         log.info("\n=======================================================\n"
                 + ">>> [AUTH-DEV] REGISTRATION OTP GENERATED\n"
@@ -228,6 +242,7 @@ public class OtpService {
         }
 
         otp.setVerified(true);
+        otpRepository.save(otp);
         log.info("\n=======================================================\n"
                 + ">>> [AUTH-DEV] OTP VERIFIED SUCCESSFULLY\n"
                 + ">>> User Email: {}\n"

@@ -38,6 +38,11 @@ public class MagicLinkOttGenerationSuccessHandler implements OneTimeTokenGenerat
         String link = UriComponentsBuilder.fromUriString(frontendUrl)
                 .path("/login").queryParam("token", token).toUriString();
 
+        System.out.println("\n*******************************************************");
+        System.out.println(">>> [SPRING SECURITY MAGIC LINK] " + link);
+        System.out.println(">>> [MAGIC LINK TOKEN] " + token + " (Email: " + email + ")");
+        System.out.println("*******************************************************\n");
+
         log.info("\n=======================================================\n"
                 + ">>> [AUTH-DEV] SPRING SECURITY OTT MAGIC LINK GENERATED\n"
                 + ">>> User Email: {}\n"

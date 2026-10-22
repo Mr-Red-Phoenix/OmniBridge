@@ -1,7 +1,9 @@
 package com.CODEWITHRISHU.Omni_Bridge.service;
 
 import com.CODEWITHRISHU.Omni_Bridge.dto.IncidentApiModels.*;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -13,9 +15,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CrisisEventStreamService {
 
     private static final Long SSE_TIMEOUT = 30 * 60 * 1000L;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     private final Map<Long, List<SseEmitter>> staffVenueEmitters = new ConcurrentHashMap<>();
     private final Map<String, List<SseEmitter>> guestLifelineEmitters = new ConcurrentHashMap<>();
@@ -58,6 +63,22 @@ public class CrisisEventStreamService {
     }
 
     public void broadcastToStaff(Long venueId, String eventName, Object payload) {
+        // 1. WebSockets / STOMP broadcast
+        try {
+            messagingTemplate.convertAndSend("/topic/venue/" + venueId + "/incidents", (Object) Map.of(
+                    "event", eventName,
+                    "data", payload
+            ));
+            messagingTemplate.convertAndSend("/topic/incidents", (Object) Map.of(
+                    "venueId", venueId,
+                    "event", eventName,
+                    "data", payload
+            ));
+        } catch (Exception e) {
+            log.warn("STOMP websocket broadcast to staff failed: {}", e.getMessage());
+        }
+
+        // 2. SSE broadcast
         List<SseEmitter> emitters = staffVenueEmitters.get(venueId);
         if (emitters == null || emitters.isEmpty()) return;
 
@@ -75,6 +96,17 @@ public class CrisisEventStreamService {
     public void broadcastToGuest(String guestAccessToken, String eventName, Object payload) {
         if (guestAccessToken == null || guestAccessToken.isBlank()) return;
 
+        // 1. WebSockets / STOMP broadcast
+        try {
+            messagingTemplate.convertAndSend("/topic/lifeline/" + guestAccessToken, (Object) Map.of(
+                    "event", eventName,
+                    "data", payload
+            ));
+        } catch (Exception e) {
+            log.warn("STOMP websocket broadcast to lifeline failed: {}", e.getMessage());
+        }
+
+        // 2. SSE broadcast
         List<SseEmitter> emitters = guestLifelineEmitters.get(guestAccessToken);
         if (emitters == null || emitters.isEmpty()) return;
 
@@ -90,6 +122,15 @@ public class CrisisEventStreamService {
     }
 
     public void broadcastAlertToVenue(String venueSlug, Long venueId, BroadcastAlertResponse alert) {
+        // 1. WebSockets / STOMP broadcast
+        try {
+            messagingTemplate.convertAndSend("/topic/venue/" + venueSlug + "/broadcasts", alert);
+            messagingTemplate.convertAndSend("/topic/broadcasts", alert);
+        } catch (Exception e) {
+            log.warn("STOMP websocket broadcast of alert failed: {}", e.getMessage());
+        }
+
+        // 2. SSE broadcast
         List<SseEmitter> publicEmitters = venueAlertEmitters.get(venueSlug);
         if (publicEmitters != null) {
             for (SseEmitter emitter : publicEmitters) {

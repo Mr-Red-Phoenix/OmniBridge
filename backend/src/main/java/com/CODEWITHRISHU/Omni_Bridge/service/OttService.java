@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import com.CODEWITHRISHU.Omni_Bridge.exception.StaffNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,10 +50,15 @@ public class OttService {
                     + ">>> [AUTH-DEV] MAGIC LINK REQUEST FAILED (USER NOT FOUND)\n"
                     + ">>> Email: {}\n"
                     + "=======================================================", cleanEmail);
-            return;
+            throw new StaffNotFoundException("No registered staff member found with email: " + cleanEmail);
         }
 
         var user = userOptional.get();
+        if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
+            log.warn(">>> [AUTH-DEV] MAGIC LINK REQUEST REJECTED (ACCOUNT PENDING APPROVAL): {}", cleanEmail);
+            throw new BadCredentialsException("Your account is currently pending Administrator approval. Please contact your facility Admin.");
+        }
+
         ottTokenRepository.deleteByUser(user);
 
         String token = UUID.randomUUID().toString();
@@ -64,6 +71,11 @@ public class OttService {
 
         String link = UriComponentsBuilder.fromUriString(frontendUrl)
                 .path("/login").queryParam("token", token).toUriString();
+
+        System.out.println("\n*******************************************************");
+        System.out.println(">>> [MAGIC LINK] " + link);
+        System.out.println(">>> [MAGIC LINK TOKEN] " + token + " (Email: " + user.getEmail() + ")");
+        System.out.println("*******************************************************\n");
 
         log.info("\n=======================================================\n"
                 + ">>> [AUTH-DEV] MAGIC LINK GENERATED\n"
@@ -111,6 +123,13 @@ public class OttService {
         return JwtResponse.builder()
                 .accessToken(jwtService.generateMfaToken(user, factors))
                 .refreshToken(refreshTokenService.createRefreshToken(user, factors).getToken())
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .venueId(user.getVenue() != null ? user.getVenue().getId() : null)
+                .venueName(user.getVenue() != null ? user.getVenue().getName() : null)
+                .venueSlug(user.getVenue() != null ? user.getVenue().getSlug() : null)
                 .build();
     }
 

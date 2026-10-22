@@ -24,5 +24,9 @@ public interface BroadcastAlertRepository extends JpaRepository<BroadcastAlert, 
             order by b.createdAt desc
             """)
     List<BroadcastAlert> findActiveForVenueSlug(@Param("venueSlug") String venueSlug);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update BroadcastAlert b set b.author = null where b.author = :staff")
+    void nullifyAuthor(@Param("staff") com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser staff);
 }
 

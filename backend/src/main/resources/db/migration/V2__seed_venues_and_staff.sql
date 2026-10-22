@@ -36,11 +36,21 @@ SET name = EXCLUDED.name,
     floor_plan_url = EXCLUDED.floor_plan_url,
     emergency_contact_phone = EXCLUDED.emergency_contact_phone;
 
--- 2. Seed Hospital Staff Members
+-- 2. Seed Hospital Staff Members (Passwordless MFA Accounts)
 INSERT INTO staff_user (name, email, role, venue_id)
 SELECT 'Dr. Evelyn Reed (Medical Director)',
        'admin@metrogeneral.org',
        'ADMIN',
+       id
+FROM venue
+WHERE slug = 'metro-general-hospital'
+ON CONFLICT (email) DO UPDATE 
+SET role = EXCLUDED.role, name = EXCLUDED.name;
+
+INSERT INTO staff_user (name, email, role, venue_id)
+SELECT 'Dr. Sarah Adams (Lead ER Physician)',
+       'doctor@metrogeneral.org',
+       'DOCTOR',
        id
 FROM venue
 WHERE slug = 'metro-general-hospital'
@@ -77,9 +87,11 @@ WHERE slug = 'metro-general-hospital'
 ON CONFLICT (email) DO UPDATE 
 SET role = EXCLUDED.role, name = EXCLUDED.name;
 
+DELETE FROM staff_user WHERE email = 'rg2822045@gmail.com';
+
 INSERT INTO staff_user (name, email, role, venue_id)
-SELECT 'Rishabh Gupta',
-       'rg2822045@gmail.com',
+SELECT 'Parth Sharma (DB Admin)',
+       'mr.parthsharma20@gmail.com',
        'ADMIN',
        id
 FROM venue

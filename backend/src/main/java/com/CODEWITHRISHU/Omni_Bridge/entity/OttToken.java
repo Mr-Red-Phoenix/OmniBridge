@@ -2,7 +2,6 @@ package com.CODEWITHRISHU.Omni_Bridge.entity;
 
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,13 +16,53 @@ public class OttToken {
     public OttToken() {
     }
 
-    @Builder
     public OttToken(Long id, String token, Instant createdAt, Instant expiresAt, StaffUser user) {
         this.id = id;
         this.token = token;
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
         this.user = user;
+    }
+
+    public static OttTokenBuilder builder() {
+        return new OttTokenBuilder();
+    }
+
+    public static class OttTokenBuilder {
+        private Long id;
+        private String token;
+        private Instant createdAt;
+        private Instant expiresAt;
+        private StaffUser user;
+
+        public OttTokenBuilder id(Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public OttTokenBuilder token(String token) {
+            this.token = token;
+            return this;
+        }
+
+        public OttTokenBuilder createdAt(Instant createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public OttTokenBuilder expiresAt(Instant expiresAt) {
+            this.expiresAt = expiresAt;
+            return this;
+        }
+
+        public OttTokenBuilder user(StaffUser user) {
+            this.user = user;
+            return this;
+        }
+
+        public OttToken build() {
+            return new OttToken(id, token, createdAt, expiresAt, user);
+        }
     }
 
     @Id
@@ -38,6 +77,7 @@ public class OttToken {
 
     @Column(nullable = false)
     private Instant expiresAt;
+
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true)
     private StaffUser user;

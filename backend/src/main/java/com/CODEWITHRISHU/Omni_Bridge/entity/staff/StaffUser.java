@@ -37,6 +37,8 @@ public class StaffUser implements UserDetails {
     @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
 
+    @Column(nullable = false, length = 20)
+    private String status = "APPROVED"; // "PENDING", "APPROVED", "REJECTED"
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -70,7 +72,7 @@ public class StaffUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return "APPROVED".equalsIgnoreCase(status);
     }
 
 }

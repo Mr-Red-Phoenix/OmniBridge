@@ -5,6 +5,8 @@ import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 
 public record StaffVerifyResponse(
         boolean exists,
+        boolean isApproved,
+        String status,
         String email,
         String name,
         Role role,
@@ -14,20 +16,27 @@ public record StaffVerifyResponse(
         String message) {
 
     public static StaffVerifyResponse found(StaffUser user) {
+        boolean approved = "APPROVED".equalsIgnoreCase(user.getStatus());
         return new StaffVerifyResponse(
                 true,
+                approved,
+                user.getStatus() != null ? user.getStatus() : "APPROVED",
                 user.getEmail(),
                 user.getName(),
                 user.getRole(),
                 user.getVenue().getId(),
                 user.getVenue().getName(),
                 user.getVenue().getSlug(),
-                "Staff member verified in database.");
+                approved
+                        ? "Staff member verified in database."
+                        : "Your registration is pending Administrator approval. Please notify your facility Admin.");
     }
 
     public static StaffVerifyResponse notFound(String email) {
         return new StaffVerifyResponse(
                 false,
+                false,
+                "NOT_FOUND",
                 email,
                 null,
                 null,

@@ -26,4 +26,8 @@ public interface IncidentUpdateRepository
             order by u.createdAt asc
             """)
     List<IncidentUpdate> findPublicTimeline(@Param("incidentId") Long incidentId);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update IncidentUpdate u set u.author = null where u.author = :staff")
+    void nullifyAuthor(@Param("staff") com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser staff);
 }
