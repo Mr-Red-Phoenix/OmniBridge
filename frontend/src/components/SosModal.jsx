@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { MarkerPin01, AlertCircle, XClose, NavigationPointer01, Phone, Check, ShieldZap } from '@untitledui/icons';
 import { toast } from 'react-toastify';
 import incidentApi from '../api/incidentApi';
+import { savePersonalLifeline } from '../utils/personalLifelineStorage';
 
 export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlug = '' }) {
   const navigate = useNavigate();
@@ -77,6 +78,19 @@ export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlu
 
       const res = await incidentApi.submitSos(venueSlug, payload);
       toast.success('EMERGENCY SOS DISPATCHED! Redirecting to Live Lifeline...');
+      
+      // Save private lifeline link to the reporter's personal notification bell
+      if (res.data?.incidentId && res.data?.guestAccessToken) {
+        savePersonalLifeline({
+          incidentId: res.data.incidentId,
+          token: res.data.guestAccessToken,
+          type,
+          location: location.trim(),
+          venueSlug,
+          venueName: venues.find((v) => v.slug === venueSlug)?.name,
+        });
+      }
+
       onClose();
 
       if (res.data?.incidentId && res.data?.guestAccessToken) {

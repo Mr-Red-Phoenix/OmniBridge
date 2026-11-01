@@ -20,26 +20,26 @@ export default function LandingPage() {
   const teamMembers = [
     {
       name: 'Parth Sharma',
-      role: 'Frontend Engineering',
-      tech: 'React 19, Vite, STOMP, ESI',
+      role: 'Frontend Architecture & DevOps',
+      tech: 'React 19, Vite, Tailwind CSS, CI/CD Pipelines, UI/UX Design',
       image: '/team/parth.png',
     },
     {
       name: 'Chirag Dobriyal',
-      role: 'Frontend Engineering',
-      tech: 'Framer Motion, 3D Transforms',
+      role: 'Quality Assurance & Integration',
+      tech: 'E2E Testing, STOMP WebSockets, Clinical Triage',
       image: '/team/chirag.png',
     },
     {
       name: 'Rishabh Gupta',
-      role: 'Backend Architecture',
-      tech: 'Java 21, Spring Boot 3',
+      role: 'Backend & Security Architecture',
+      tech: 'Spring Boot 3, Java 21, JWT/MFA Security, Crisis Incident Orchestration',
       image: '/team/rishabh.png',
     },
     {
       name: 'Akshat Kala',
-      role: 'Backend Architecture',
-      tech: 'PostgreSQL, Virtual Threads',
+      role: 'Database & Core Algorithms',
+      tech: 'PostgreSQL, Flyway, AHRQ ESI Engine, Dynamic Priority RAM Heap',
       image: '/team/akshat.png',
     },
   ];

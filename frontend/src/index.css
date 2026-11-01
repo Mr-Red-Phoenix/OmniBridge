@@ -38,6 +38,17 @@
   padding: 0;
 }
 
+/* Hide scrollbar for Chrome, Safari, Opera and IE/Edge */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
 body {
   font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
   background-color: var(--bg-color);
@@ -273,5 +284,37 @@ input:focus, select:focus, textarea:focus {
 
 .Toastify__progress-bar--warning {
   background: #f59e0b;
+}
+
+/* Fix dark mode calendar picker icon invert */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+}
+
+/* Ensure compact date inputs in filter bars do not get blown out by global input styles */
+.date-picker-field {
+  width: auto !important;
+  padding: 0.35rem 0.5rem !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 0.8rem !important;
+  height: auto !important;
+}
+.date-picker-field:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
 

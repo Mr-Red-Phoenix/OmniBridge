@@ -64,11 +64,18 @@ export default function GuestLifeline() {
         try {
           const data = JSON.parse(event.data);
           setLifeline(data);
-          toast.info('Incident status updated in real-time!');
         } catch (e) {
           console.error('Failed to parse SSE lifeline event', e);
         }
       });
+
+      // Refetch if granular notification events are sent
+      const handleGenericUpdate = () => fetchLifeline();
+      eventSource.addEventListener('LIFELINE_INSTRUCTION', handleGenericUpdate);
+      eventSource.addEventListener('MESSAGE_DELIVERED', handleGenericUpdate);
+      eventSource.addEventListener('STATUS_UPDATE', handleGenericUpdate);
+      eventSource.addEventListener('REPORT_VERIFIED', handleGenericUpdate);
+      eventSource.addEventListener('EMERGENCY_DISPATCHED', handleGenericUpdate);
 
       eventSource.onerror = () => {
         setStreamStatus('connecting');

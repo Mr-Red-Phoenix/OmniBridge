@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   Bell01 as Bell,
   AlertTriangle,
@@ -8,10 +9,15 @@ import {
   Signal01 as Radio,
   Clock,
   RefreshCw01 as RefreshCw,
+  ActivityHeart,
+  MessageSquare01 as MessageSquare,
+  ArrowUpRight,
+  Trash01 as Trash,
 } from '@untitledui/icons';
 import guestApi from '../api/guestApi';
 import venueApi from '../api/venueApi';
 import { useAuth } from '../context/AuthContext';
+import { getPersonalLifelines, removePersonalLifeline } from '../utils/personalLifelineStorage';
 
 export default function NotificationBell() {
   const { user } = useAuth();
@@ -19,9 +25,27 @@ export default function NotificationBell() {
   const [venues, setVenues] = useState([]);
   const [selectedVenue, setSelectedVenue] = useState('metro-general-hospital');
   const [alerts, setAlerts] = useState([]);
+  const [personalLifelines, setPersonalLifelines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Sync personal lifelines (stored locally on this user's device only)
+  const syncPersonalLifelines = () => {
+    const list = getPersonalLifelines();
+    setPersonalLifelines(list);
+  };
+
+  useEffect(() => {
+    syncPersonalLifelines();
+    const handleStorageUpdate = () => syncPersonalLifelines();
+    window.addEventListener('omnibridge_lifeline_updated', handleStorageUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('omnibridge_lifeline_updated', handleStorageUpdate);
+      window.removeEventListener('storage', handleStorageUpdate);
+    };
+  }, []);
 
   // 1. Fetch available venues or default to user's venue
   useEffect(() => {
@@ -137,9 +161,9 @@ export default function NotificationBell() {
         <Bell size={18} className="stroke-[2.1]" />
 
         {/* Badge count / pulsating indicator */}
-        {alerts.length > 0 && (
+        {(alerts.length > 0 || personalLifelines.length > 0) && (
           <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[9.5px] font-black text-white ring-2 ring-white dark:ring-[#0c121e] animate-pulse">
-            {alerts.length}
+            {alerts.length + personalLifelines.length}
           </span>
         )}
       </button>
@@ -158,10 +182,11 @@ export default function NotificationBell() {
             <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/70 dark:bg-slate-950/40">
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
-                  Facility Broadcast Alerts
+                  Emergency Notifications
                 </h4>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                  {alerts.length} active emergency notice{alerts.length === 1 ? '' : 's'}
+                  {personalLifelines.length > 0 && `${personalLifelines.length} private lifeline${personalLifelines.length === 1 ? '' : 's'} • `}
+                  {alerts.length} active broadcast{alerts.length === 1 ? '' : 's'}
                 </span>
               </div>
 
@@ -193,13 +218,78 @@ export default function NotificationBell() {
             )}
 
             {/* Content List */}
-            <div className="max-h-[360px] overflow-y-auto p-3 space-y-2.5">
+            <div className="max-h-[380px] overflow-y-auto p-3 space-y-2.5">
+              
+              {/* Private Active Incident Lifelines (Only visible on THIS reporter's device, NEVER broadcasted) */}
+              {personalLifelines.length > 0 && (
+                <div className="space-y-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                      <ActivityHeart size={12} className="stroke-[2.5]" />
+                      My Active Incident Lifelines ({personalLifelines.length})
+                    </span>
+                    <span className="text-[9.5px] text-slate-400 font-medium">Private to you</span>
+                  </div>
+
+                  {personalLifelines.map((pl) => (
+                    <div
+                      key={pl.incidentId}
+                      className="p-3 rounded-xl border bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50 transition-all hover:border-blue-300 dark:hover:border-blue-700 shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <div className="p-1.5 rounded-lg bg-blue-600 text-white shrink-0 mt-0.5">
+                            <MessageSquare size={14} className="stroke-[2.4]" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black text-blue-700 dark:text-blue-300">
+                                Incident #{pl.incidentId}
+                              </span>
+                              <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 uppercase">
+                                {pl.type}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate mt-0.5">
+                              {pl.location}
+                            </p>
+                            <p className="text-[9.5px] text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
+                              {new Date(pl.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Link
+                            to={pl.url}
+                            onClick={() => setIsOpen(false)}
+                            className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-transform active:scale-95"
+                            title="Open 2-Way Command Chat & Live Telemetry"
+                          >
+                            <span>Chat</span>
+                            <ArrowUpRight size={12} className="stroke-[2.5]" />
+                          </Link>
+
+                          <button
+                            onClick={() => removePersonalLifeline(pl.incidentId)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            title="Remove from my notifications"
+                          >
+                            <Trash size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {loading && alerts.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
                   <RefreshCw size={16} className="animate-spin text-blue-500" />
                   <span>Checking for active alerts...</span>
                 </div>
-              ) : alerts.length === 0 ? (
+              ) : alerts.length === 0 && personalLifelines.length === 0 ? (
                 <div className="py-8 px-4 text-center">
                   <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-2">
                     <Radio size={18} />

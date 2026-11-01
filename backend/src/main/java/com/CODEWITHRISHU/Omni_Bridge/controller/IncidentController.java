@@ -1,6 +1,9 @@
 package com.CODEWITHRISHU.Omni_Bridge.controller;
 
 import com.CODEWITHRISHU.Omni_Bridge.dto.IncidentApiModels.*;
+import com.CODEWITHRISHU.Omni_Bridge.entity.incident.IncidentStatus;
+import com.CODEWITHRISHU.Omni_Bridge.entity.incident.IncidentType;
+import com.CODEWITHRISHU.Omni_Bridge.entity.incident.Severity;
 import com.CODEWITHRISHU.Omni_Bridge.entity.staff.StaffUser;
 import com.CODEWITHRISHU.Omni_Bridge.service.CrisisEventStreamService;
 import com.CODEWITHRISHU.Omni_Bridge.service.IncidentService;
@@ -56,6 +59,39 @@ public class IncidentController {
     @PreAuthorize("hasAnyRole('STAFF', 'SECURITY', 'COORDINATOR', 'ADMIN')")
     public List<IncidentResponse> incidentBoard(@AuthenticationPrincipal StaffUser staff) {
         return incidentService.listOpenIncidents(staff);
+    }
+
+    @GetMapping("/staff/incidents/analytics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<IncidentAnalyticsSummary> getHistoricalAnalytics(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) IncidentType type,
+            @RequestParam(required = false) IncidentStatus status,
+            @RequestParam(required = false) Severity severity,
+            @AuthenticationPrincipal StaffUser staff) {
+        java.time.Instant start = null;
+        java.time.Instant end = null;
+        if (startDate != null && !startDate.isBlank()) {
+            try {
+                start = java.time.Instant.parse(startDate);
+            } catch (Exception ignored) {
+                // fallback if date-only format like yyyy-MM-dd is sent
+                try {
+                    start = java.time.LocalDate.parse(startDate).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+                } catch (Exception ignored2) {}
+            }
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            try {
+                end = java.time.Instant.parse(endDate);
+            } catch (Exception ignored) {
+                try {
+                    end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59, 999999999).atZone(java.time.ZoneOffset.UTC).toInstant();
+                } catch (Exception ignored2) {}
+            }
+        }
+        return ResponseEntity.ok(incidentService.getIncidentAnalytics(staff, start, end, type, status, severity));
     }
 
     @GetMapping("/staff/incidents/{incidentId}")

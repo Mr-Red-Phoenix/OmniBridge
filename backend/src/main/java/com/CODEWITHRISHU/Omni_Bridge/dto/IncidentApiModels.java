@@ -247,4 +247,24 @@ public final class IncidentApiModels {
                     author);
         }
     }
+
+    public record IncidentTimeSeriesPoint(
+            String dateLabel,
+            long reportedCount,
+            long resolvedCount) {}
+
+    public record IncidentAnalyticsSummary(
+            long totalIncidents,
+            long resolvedCount,
+            long activeCount,
+            long falseAlarmCount,
+            double resolutionRatePercent,
+            double avgResolutionTimeMinutes,
+            long criticalCount,
+            long emergencyDispatchedCount,
+            List<IncidentTimeSeriesPoint> timeline,
+            java.util.Map<String, Long> countByType,
+            java.util.Map<String, Long> countBySeverity,
+            java.util.Map<String, Long> countByStatus,
+            List<IncidentResponse> incidents) {}
 }

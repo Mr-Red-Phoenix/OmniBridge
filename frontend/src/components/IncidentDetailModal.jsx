@@ -66,6 +66,13 @@ export default function IncidentDetailModal({
   useEffect(() => {
     if (isOpen && incidentId) {
       fetchDetail();
+      // Poll every 3 seconds while modal is open so incoming guest messages appear automatically
+      const pollTimer = setInterval(() => {
+        incidentApi.getIncidentDetail(incidentId).then((res) => {
+          setDetail(res.data);
+        }).catch(() => {});
+      }, 3000);
+      return () => clearInterval(pollTimer);
     }
   }, [isOpen, incidentId]);
 

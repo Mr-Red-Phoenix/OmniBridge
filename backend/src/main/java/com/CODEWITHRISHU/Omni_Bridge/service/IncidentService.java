@@ -121,6 +121,124 @@ public class IncidentService {
     }
 
     @Transactional(readOnly = true)
+    public IncidentAnalyticsSummary getIncidentAnalytics(
+            StaffUser staff,
+            Instant startDate,
+            Instant endDate,
+            IncidentType type,
+            IncidentStatus status,
+            Severity severity) {
+        Long venueId = venueIdOf(staff);
+        List<Incident> allVenueIncidents = incidentRepository.findAllByVenueId(venueId);
+
+        List<Incident> records = allVenueIncidents.stream()
+                .filter(i -> {
+                    if (startDate != null && i.getCreatedAt() != null && i.getCreatedAt().isBefore(startDate)) {
+                        return false;
+                    }
+                    if (endDate != null && i.getCreatedAt() != null && i.getCreatedAt().isAfter(endDate)) {
+                        return false;
+                    }
+                    if (type != null && i.getType() != type) {
+                        return false;
+                    }
+                    if (status != null && i.getStatus() != status) {
+                        return false;
+                    }
+                    if (severity != null && i.getSeverity() != severity) {
+                        return false;
+                    }
+                    return true;
+                })
+                .toList();
+
+        long total = records.size();
+        long resolved = 0;
+        long active = 0;
+        long falseAlarm = 0;
+        long critical = 0;
+        long emergencyDispatched = 0;
+        long totalResolutionSeconds = 0;
+        long resolutionTimeCount = 0;
+
+        java.util.Map<String, Long> countByType = new java.util.TreeMap<>();
+        java.util.Map<String, Long> countBySeverity = new java.util.TreeMap<>();
+        java.util.Map<String, Long> countByStatus = new java.util.TreeMap<>();
+        java.util.Map<String, long[]> timelineMap = new java.util.TreeMap<>();
+        java.time.format.DateTimeFormatter dayFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                .withZone(java.time.ZoneOffset.UTC);
+
+        for (Incident inc : records) {
+            if (inc.getStatus() == IncidentStatus.RESOLVED || inc.getStatus() == IncidentStatus.CLOSED) {
+                resolved++;
+                if (inc.getCreatedAt() != null && inc.getUpdatedAt() != null) {
+                    long diff = java.time.Duration.between(inc.getCreatedAt(), inc.getUpdatedAt()).getSeconds();
+                    if (diff > 0) {
+                        totalResolutionSeconds += diff;
+                        resolutionTimeCount++;
+                    }
+                }
+            } else if (inc.getStatus() == IncidentStatus.FALSE_ALARM) {
+                falseAlarm++;
+            } else {
+                active++;
+            }
+
+            if (inc.getSeverity() == Severity.CRITICAL) {
+                critical++;
+            }
+            if (inc.isEmergencyDispatched()) {
+                emergencyDispatched++;
+            }
+
+            if (inc.getType() != null) {
+                countByType.merge(inc.getType().name(), 1L, Long::sum);
+            }
+            if (inc.getSeverity() != null) {
+                countBySeverity.merge(inc.getSeverity().name(), 1L, Long::sum);
+            }
+            if (inc.getStatus() != null) {
+                countByStatus.merge(inc.getStatus().name(), 1L, Long::sum);
+            }
+
+            if (inc.getCreatedAt() != null) {
+                String day = dayFormatter.format(inc.getCreatedAt());
+                timelineMap.putIfAbsent(day, new long[]{0L, 0L});
+                timelineMap.get(day)[0]++; // reported
+                if (inc.getStatus() == IncidentStatus.RESOLVED || inc.getStatus() == IncidentStatus.CLOSED) {
+                    timelineMap.get(day)[1]++; // resolved
+                }
+            }
+        }
+
+        double resolutionRate = total > 0 ? ((double) resolved / total) * 100.0 : 0.0;
+        double avgResolutionMinutes = resolutionTimeCount > 0 ? (double) totalResolutionSeconds / (resolutionTimeCount * 60.0) : 0.0;
+
+        List<IncidentTimeSeriesPoint> timeline = timelineMap.entrySet().stream()
+                .map(e -> new IncidentTimeSeriesPoint(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                .toList();
+
+        List<IncidentResponse> incidentResponses = records.stream()
+                .map(IncidentResponse::from)
+                .toList();
+
+        return new IncidentAnalyticsSummary(
+                total,
+                resolved,
+                active,
+                falseAlarm,
+                Math.round(resolutionRate * 10.0) / 10.0,
+                Math.round(avgResolutionMinutes * 10.0) / 10.0,
+                critical,
+                emergencyDispatched,
+                timeline,
+                countByType,
+                countBySeverity,
+                countByStatus,
+                incidentResponses);
+    }
+
+    @Transactional(readOnly = true)
     public IncidentDetailResponse getDetail(Long incidentId, StaffUser staff) {
         var incident = findOwned(incidentId, staff);
         var timeline = updateRepository.findTimeline(incident.getId()).stream()
@@ -161,6 +279,8 @@ public class IncidentService {
         streamService.broadcastToStaff(venueIdOf(staff), "INCIDENT_UPDATE", IncidentUpdateResponse.from(update));
 
         if (isPublic) {
+            GuestLifelineResponse fullLifeline = getGuestLifeline(incident.getId(), incident.getGuestAccessToken());
+            streamService.broadcastToGuest(incident.getGuestAccessToken(), "lifeline", fullLifeline);
             streamService.broadcastToGuest(incident.getGuestAccessToken(), "LIFELINE_INSTRUCTION", Map.of(
                     "incidentId", incident.getId(),
                     "message", request.message().trim(),
@@ -185,6 +305,8 @@ public class IncidentService {
                 "previous", previous,
                 "current", next));
 
+        GuestLifelineResponse fullLifeline = getGuestLifeline(incident.getId(), incident.getGuestAccessToken());
+        streamService.broadcastToGuest(incident.getGuestAccessToken(), "lifeline", fullLifeline);
         streamService.broadcastToGuest(incident.getGuestAccessToken(), "STATUS_UPDATE", Map.of(
                 "incidentId", incident.getId(),
                 "status", next,
@@ -281,12 +403,15 @@ public class IncidentService {
         String guestMsg = "[OCCUPANT UPDATE] " + request.message().trim();
         IncidentUpdate update = record(incident, null, guestMsg, true, "GUEST_MESSAGE");
 
+        streamService.broadcastToStaff(incident.getVenue().getId(), "INCIDENT_UPDATE", IncidentUpdateResponse.from(update));
         streamService.broadcastToStaff(incident.getVenue().getId(), "GUEST_LIFELINE_MESSAGE", Map.of(
                 "incidentId", incident.getId(),
                 "message", request.message().trim(),
                 "location", incident.getLocation(),
                 "timestamp", update.getCreatedAt()));
 
+        GuestLifelineResponse fullLifeline = getGuestLifeline(incident.getId(), incident.getGuestAccessToken());
+        streamService.broadcastToGuest(incident.getGuestAccessToken(), "lifeline", fullLifeline);
         streamService.broadcastToGuest(incident.getGuestAccessToken(), "MESSAGE_DELIVERED", Map.of(
                 "incidentId", incident.getId(),
                 "message", request.message().trim()));

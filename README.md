@@ -40,9 +40,17 @@ Modern public venues, hospital systems, stadiums, and university campuses experi
 
 ### 1. 🚨 Incident Command & Guest Lifeline
 * **Public SOS Panic Beacon**: One-click emergency distress beacon with browser GPS geolocation (`navigator.geolocation`) that auto-routes the reporter into a dedicated, encrypted lifeline session.
-* **Bi-Directional Guest Lifeline (`/lifeline/:incidentId`)**: Real-time visual progress stepper (`REPORTED` ➔ `ACKNOWLEDGED` ➔ `RESPONDING` ➔ `RESOLVED` ➔ `CLOSED`), instant 911/EMS dispatch badges, facility evacuation advisories, and an interactive 2-way dispatch messaging channel.
+* **Bi-Directional Guest Lifeline (`/lifeline/:incidentId`)**: Real-time visual progress stepper (`REPORTED` ➔ `ACKNOWLEDGED` ➔ `RESPONDING` ➔ `RESOLVED` ➔ `CLOSED`), instant 911/EMS dispatch badges, facility evacuation advisories, and an interactive 2-way dispatch messaging channel with instant SSE & WebSocket synchronization.
+* **Private Notification Bell Lifeline Hub**: Whenever an occupant triggers an SOS or submits an incident report, their active incident chat link is pinned privately inside their notification bell with zero broadcast exposure to other facility guests.
+* **Real-Time Operational Audio Dispatch Chimes**: Web Audio API-synthesized chime alerts for Staff Command, providing immediate audible cues for incoming emergency incidents and physician override requests with quick mute/unmute control.
 * **Tactical First Responder Packet (`/responder/:token`)**: Direct-access mobile portal providing field personnel with gate access codes, Knox Box locations, architectural blueprints (PDF), one-click Google Maps GPS navigation, and direct dispatch dialer.
 * **Facility Emergency Broadcasts**: Venue-wide security and weather alerts streamed via SSE to active venue displays, notification bells, and guest screens.
+* **Historical Incident Analytics & Audit Intelligence (`/staff` -> Historic Analytics & Reports)**:
+  * **Role-Guarded Admin Dashboard**: Exclusively accessible to system administrators (`ADMIN`), isolated from operational dispatch and clinical workflows.
+  * **Interactive Trend Visualizations & Metrics**: Total incident counts, resolved vs. false alarms, average resolution turnaround formatted in intuitive hours/minutes (`8h 42m`), resolution rates (%), and dual-metric SVG volume & resolution area charts with interactive hover tooltips.
+  * **Operational Categorization Breakdown**: Proportional breakdown across Incident Types (Medical, Fire, Security, Hazard, Disturbance, Technical) and Criticality Tiers (Low, Medium, High, Critical).
+  * **Configurable Temporal Range Filters**: Quick preset chips (*Today*, *Last 7 Days*, *Last 30 Days*, *This Month*, *All-Time*) paired with custom compact start and end date pickers.
+  * **Three-Column Condition Selectors & Audit Table**: Real-time filtering by Incident Type, Severity Level, and Operational Status, with a responsive live audit table displaying ID, timestamps, location, and reporter identity. Fully responsive across desktop monitors and mobile devices with hamburger navigation drawers.
 
 ### 2. 🏥 Contextual ESI Clinical Triage Engine (AHRQ 5-Tier)
 * **Nurse Intake Assessment (`/staff` -> Triage)**: Guided triage entry following Agency for Healthcare Research and Quality (AHRQ) Decision Gates:
@@ -102,7 +110,7 @@ graph TD
     end
 
     subgraph Storage["Persistent Storage & Telemetry"]
-        PG[("PostgreSQL Database<br/>Flyway Migrations (V1-V8)")]
+        PG[("PostgreSQL Database<br/>Flyway Migrations (V1-V9)")]
     end
 
     Guest -->|REST / Geolocation SOS| SecFilter
@@ -165,7 +173,7 @@ cd backend
 ./mvnw spring-boot:run
 ```
 * Backend starts at `http://localhost:8081`
-* Database migrations (V1 to V8) run automatically via Flyway on startup.
+* Database migrations (V1 to V9) run automatically via Flyway on startup.
 
 #### 2. Frontend Application (React 19 + Vite)
 ```bash
@@ -254,6 +262,7 @@ The OmniBridge Clinical Module implements the **Emergency Severity Index (ESI) I
 - `POST /api/report/{venueSlug}`: Submit guest incident report with optional GPS coordinates.
 - `POST /api/report/{venueSlug}/sos`: Submit panic SOS distress beacon.
 - `GET /api/staff/incidents/stream`: Real-time SSE stream of facility incidents and status changes.
+- `GET /api/staff/incidents/analytics`: Historical analytics, aggregated metrics, time-series, and filtered incident logs (`ADMIN` only). Supports optional query params: `startDate`, `endDate`, `type`, `status`, `severity`.
 - `POST /api/staff/incidents/{id}/acknowledge`: Mark incident acknowledged by command.
 - `POST /api/staff/incidents/{id}/dispatch-emergency`: Dispatch external 911 / EMS units.
 - `POST /api/staff/incidents/{id}/verify`: Verify incident validity and escalate threat tier.
@@ -283,7 +292,7 @@ omnibridge/
 │   │   ├── repository/                   # Spring Data JPA Repositories
 │   │   └── service/                      # Core Business Logic & Triage Engines
 │   ├── src/main/resources/
-│   │   ├── db/migration/                 # Flyway SQL Migrations (V1 to V8)
+│   │   ├── db/migration/                 # Flyway SQL Migrations (V1 to V9)
 │   │   ├── application.properties        # App Configuration
 │   │   └── application-dev.properties    # PostgreSQL Connection Settings
 │   ├── pom.xml                           # Maven Dependencies

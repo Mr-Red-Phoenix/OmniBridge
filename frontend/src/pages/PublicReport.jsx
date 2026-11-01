@@ -19,6 +19,7 @@ import { toast } from 'react-toastify';
 import venueApi from '../api/venueApi';
 import incidentApi from '../api/incidentApi';
 import BroadcastBanner from '../components/BroadcastBanner';
+import { savePersonalLifeline } from '../utils/personalLifelineStorage';
 
 const FALLBACK_VENUES = [
   { slug: 'metro-general-hospital', name: 'Metro General Hospital & Trauma Center', type: 'hospital' },
@@ -126,6 +127,18 @@ export default function PublicReport({ onOpenSos }) {
       const res = await incidentApi.submitReport(selectedVenue, payload);
       toast.success('Incident reported successfully! Command center notified.');
       setCreatedIncident(res.data);
+
+      // Save private lifeline link to the reporter's personal notification bell
+      if (res.data?.incidentId && res.data?.guestAccessToken) {
+        savePersonalLifeline({
+          incidentId: res.data.incidentId,
+          token: res.data.guestAccessToken,
+          type,
+          location: location.trim(),
+          venueSlug: selectedVenue,
+          venueName: venues.find((v) => v.slug === selectedVenue)?.name,
+        });
+      }
 
       setDescription('');
       setLocation('');

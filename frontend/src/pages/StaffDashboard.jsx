@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
@@ -38,6 +38,9 @@ import BroadcastManagerModal from '../components/BroadcastManagerModal';
 import AdminUserManagement from '../components/AdminUserManagement';
 import NurseIntakeForm from '../components/triage/NurseIntakeForm';
 import DoctorReviewModal from '../components/triage/DoctorReviewModal';
+import AdminIncidentAnalytics from '../components/AdminIncidentAnalytics';
+import { playNewIncidentSound, playOverrideRequestSound } from '../utils/soundNotification';
+import { VolumeMax, VolumeX } from '@untitledui/icons';
 
 export default function StaffDashboard() {
   const { user, role } = useAuth();
@@ -64,9 +67,12 @@ export default function StaffDashboard() {
   const canAccessQueue = isStaffNurse || isCoordinator || isAdmin;
   const canAccessClinicalReview = isCoordinator;
   const canAccessReports = true; // All authenticated staff roles access venue SOS & reports
+  const canAccessAnalytics = isAdmin; // Only ADMIN can view historic summary & analytics reports
 
   // Default active tab based on role
-  const defaultTab = canAccessEsi 
+  const defaultTab = canAccessAnalytics
+    ? 'analytics'
+    : canAccessEsi 
     ? 'triage_intake' 
     : canAccessQueue 
     ? 'triage_queue' 
@@ -82,6 +88,14 @@ export default function StaffDashboard() {
   const [triageQueue, setTriageQueue] = useState([]);
   const [triageLoading, setTriageLoading] = useState(false);
   const [reviewPatient, setReviewPatient] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    return localStorage.getItem('omni_audio_alerts') !== 'false';
+  });
+
+  // Track known incident and flagged case IDs to prevent duplicate alerts
+  const knownIncidentIds = useRef(new Set());
+  const knownFlaggedIds = useRef(new Set());
+  const isInitialLoad = useRef(true);
 
   // Filters & Search for Incidents
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,11 +107,34 @@ export default function StaffDashboard() {
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    localStorage.setItem('omni_audio_alerts', String(next));
+    if (next) {
+      playNewIncidentSound();
+      toast.info('Audio alerts enabled', { toastId: 'audio-toggle-toast' });
+    } else {
+      toast.info('Audio alerts muted', { toastId: 'audio-toggle-toast' });
+    }
+  };
+
   const fetchIncidents = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const res = await incidentApi.getStaffIncidents();
-      setIncidents(res.data || []);
+      const list = res.data || [];
+      
+      // On real-time update, check for any newly arrived incidents
+      if (silent && !isInitialLoad.current && list.length > 0) {
+        const hasNew = list.some((inc) => !knownIncidentIds.current.has(inc.id));
+        if (hasNew && soundEnabled) {
+          playNewIncidentSound();
+        }
+      }
+      
+      list.forEach((inc) => knownIncidentIds.current.add(inc.id));
+      setIncidents(list);
     } catch {
       if (!silent) toast.error('Failed to load incident board');
     } finally {
@@ -109,11 +146,32 @@ export default function StaffDashboard() {
     setTriageLoading(true);
     try {
       const res = await triageApi.getQueue();
-      setTriageQueue(res.data || []);
+      const list = res.data || [];
+      
+      // Check for newly flagged doctor review cases
+      if (!isInitialLoad.current && list.length > 0) {
+        const newFlagged = list.some(
+          (p) =>
+            (p.status === 'FLAGGED_FOR_REVIEW' || p.status === 'SPECIAL_REQUEST') &&
+            !knownFlaggedIds.current.has(p.id)
+        );
+        if (newFlagged && soundEnabled) {
+          playOverrideRequestSound();
+        }
+      }
+
+      list.forEach((p) => {
+        if (p.status === 'FLAGGED_FOR_REVIEW' || p.status === 'SPECIAL_REQUEST') {
+          knownFlaggedIds.current.add(p.id);
+        }
+      });
+
+      setTriageQueue(list);
     } catch {
       // triage queue silent fail
     } finally {
       setTriageLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
@@ -135,6 +193,9 @@ export default function StaffDashboard() {
         try {
           const newInc = JSON.parse(e.data);
           toast.warning(`NEW INCIDENT REPORTED #${newInc.id}: ${newInc.type}`);
+          if (soundEnabled) {
+            playNewIncidentSound();
+          }
           fetchIncidents(true);
         } catch {}
       });
@@ -162,6 +223,22 @@ export default function StaffDashboard() {
               try {
                 const updatedQueue = JSON.parse(message.body);
                 if (Array.isArray(updatedQueue)) {
+                  // Check if any incoming case is flagged for review that wasn't previously known
+                  const hasNewFlagged = updatedQueue.some(
+                    (p) =>
+                      (p.status === 'FLAGGED_FOR_REVIEW' || p.status === 'SPECIAL_REQUEST') &&
+                      !knownFlaggedIds.current.has(p.id)
+                  );
+                  if (hasNewFlagged && soundEnabled) {
+                    playOverrideRequestSound();
+                  }
+
+                  updatedQueue.forEach((p) => {
+                    if (p.status === 'FLAGGED_FOR_REVIEW' || p.status === 'SPECIAL_REQUEST') {
+                      knownFlaggedIds.current.add(p.id);
+                    }
+                  });
+
                   setTriageQueue(updatedQueue);
                 }
               } catch (e) {
@@ -241,14 +318,14 @@ export default function StaffDashboard() {
       className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 py-6 pb-20 w-full"
     >
       {/* Top Command Bar */}
-      <div className="card mb-6 p-4 sm:p-5 flex flex-wrap justify-between items-center gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs rounded-2xl">
+      <div className="card mb-6 p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs rounded-2xl">
         <div className="flex items-center gap-3.5">
-          <div className="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/25 border border-white/20">
+          <div className="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/25 border border-white/20 shrink-0">
             <ShieldTick size={24} />
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
           </div>
           <div>
-            <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Staff Operations Center
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -264,12 +341,35 @@ export default function StaffDashboard() {
           </div>
         </div>
 
-        {/* Global Action Triggers (Refresh button removed) */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Global Action Triggers */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Audio Alert Toggle */}
+          <button
+            onClick={toggleSound}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 border ${
+              soundEnabled
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+            }`}
+            title={soundEnabled ? 'Audio Alerts: On (Click to Mute)' : 'Audio Alerts: Muted (Click to Unmute)'}
+          >
+            {soundEnabled ? (
+              <>
+                <VolumeMax size={14} className="stroke-[2.2] text-emerald-600 dark:text-emerald-400" />
+                <span>Audio Alert On</span>
+              </>
+            ) : (
+              <>
+                <VolumeX size={14} className="stroke-[2.2]" />
+                <span>Audio Alert Muted</span>
+              </>
+            )}
+          </button>
+
           {canBroadcast && (
             <button
               onClick={() => setIsBroadcastModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
             >
               <Radio size={14} className="stroke-[2.2]" /> Broadcast Alert
             </button>
@@ -278,7 +378,7 @@ export default function StaffDashboard() {
           {canManageStaff && (
             <button
               onClick={() => setIsAdminModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/50 border border-blue-200 dark:border-blue-900/50 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/50 border border-blue-200 dark:border-blue-900/50 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
             >
               <Users size={14} className="stroke-[2.2]" /> Manage Staff
             </button>
@@ -287,7 +387,7 @@ export default function StaffDashboard() {
       </div>
 
       {/* Role-Based Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 mb-6 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 mb-6 overflow-x-auto no-scrollbar scroll-smooth">
         {/* STAFF & COORDINATOR (Doctor) Tab: ESI Triage Intake */}
         {canAccessEsi && (
           <button
@@ -354,6 +454,23 @@ export default function StaffDashboard() {
             <FileSpreadsheet size={15} /> Venue SOS &amp; Incident Reports
             <span className="px-2 py-0.5 rounded-full bg-slate-900/30 dark:bg-slate-950/60 text-[10px] font-bold">
               {incidents.length}
+            </span>
+          </button>
+        )}
+
+        {/* Analytics & Historic Reports (ADMIN ONLY) */}
+        {canAccessAnalytics && (
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Activity size={15} /> Historic Analytics &amp; Reports
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/30">
+              Admin
             </span>
           </button>
         )}
@@ -783,14 +900,14 @@ export default function StaffDashboard() {
           <div className="rounded-2xl p-3.5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800/90 shadow-xs">
             <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
               {/* Search input with modern left icon */}
-              <div className="relative flex-1 max-w-lg">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <div className="relative flex-1 max-w-lg flex items-center">
+                <Search size={16} className="absolute left-3.5 text-slate-400 pointer-events-none z-10 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search incidents by ID, complaint, location, or reporter..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                  className="w-full !pl-10 !pr-4 !py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
                 />
               </div>
 
@@ -1044,6 +1161,11 @@ export default function StaffDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB 5: Admin Historical Incident Analytics & Reports */}
+      {activeTab === 'analytics' && canAccessAnalytics && (
+        <AdminIncidentAnalytics onSelectIncident={(id) => setSelectedIncidentId(id)} />
       )}
 
       {/* Doctor Review Modal */}

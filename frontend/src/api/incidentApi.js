@@ -7,6 +7,16 @@ export const incidentApi = {
 
   // Staff Incident Command
   getStaffIncidents: () => api.get('/staff/incidents'),
+  getIncidentAnalytics: (params = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.startDate) searchParams.append('startDate', params.startDate);
+    if (params.endDate) searchParams.append('endDate', params.endDate);
+    if (params.type && params.type !== 'ALL') searchParams.append('type', params.type);
+    if (params.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    if (params.severity && params.severity !== 'ALL') searchParams.append('severity', params.severity);
+    const qs = searchParams.toString();
+    return api.get(`/staff/incidents/analytics${qs ? `?${qs}` : ''}`);
+  },
   getIncidentDetail: (incidentId) => api.get(`/staff/incidents/${incidentId}`),
   
   acknowledge: (incidentId) => api.post(`/staff/incidents/${incidentId}/acknowledge`),
