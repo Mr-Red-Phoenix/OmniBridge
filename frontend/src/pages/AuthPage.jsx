@@ -295,7 +295,7 @@ export default function AuthPage() {
         setRegPhone('');
         setRegOtp('');
         setRegOtpSent(false);
-        setMode('login');
+        setAuthMode('magic');
         setAuthEmail(payload.email);
       }
     } catch (err) {

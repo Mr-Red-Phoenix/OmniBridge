@@ -35,3 +35,4 @@ BEGIN
         WHERE id != metro_id;
     END IF;
 END $$;
+
