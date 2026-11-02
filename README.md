@@ -110,7 +110,7 @@ graph TD
     end
 
     subgraph Storage["Persistent Storage & Telemetry"]
-        PG[("PostgreSQL Database<br/>Flyway Migrations (V1-V9)")]
+        PG[("PostgreSQL Database<br/>Flyway Migrations (V1-V10)")]
     end
 
     Guest -->|REST / Geolocation SOS| SecFilter
@@ -173,7 +173,7 @@ cd backend
 ./mvnw spring-boot:run
 ```
 * Backend starts at `http://localhost:8081`
-* Database migrations (V1 to V9) run automatically via Flyway on startup.
+* Database migrations (V1 to V10) run automatically via Flyway on startup.
 
 #### 2. Frontend Application (React 19 + Vite)
 ```bash
@@ -292,7 +292,7 @@ omnibridge/
 │   │   ├── repository/                   # Spring Data JPA Repositories
 │   │   └── service/                      # Core Business Logic & Triage Engines
 │   ├── src/main/resources/
-│   │   ├── db/migration/                 # Flyway SQL Migrations (V1 to V9)
+│   │   ├── db/migration/                 # Flyway SQL Migrations (V1 to V10)
 │   │   ├── application.properties        # App Configuration
 │   │   └── application-dev.properties    # PostgreSQL Connection Settings
 │   ├── pom.xml                           # Maven Dependencies

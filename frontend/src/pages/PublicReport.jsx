@@ -1,15 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
-  Activity,
-  HeartPulse,
-  Stethoscope,
-  Syringe,
-  Bed,
   Building,
-  Check,
   ShieldAlert,
   Navigation,
   ExternalLink,
@@ -21,20 +15,15 @@ import incidentApi from '../api/incidentApi';
 import BroadcastBanner from '../components/BroadcastBanner';
 import { savePersonalLifeline } from '../utils/personalLifelineStorage';
 
-const FALLBACK_VENUES = [
-  { slug: 'metro-general-hospital', name: 'Metro General Hospital & Trauma Center', type: 'hospital' },
-  { slug: 'er-ward', name: 'Emergency Room', type: 'emergency' },
-  { slug: 'icu-ward', name: 'Intensive Care Unit (ICU)', type: 'icu' },
-  { slug: 'maternity-ward', name: 'Maternity Ward', type: 'maternity' },
-  { slug: 'outpatient-clinic', name: 'Outpatient Clinic', type: 'clinic' },
-  { slug: 'surgery-wing', name: 'Surgery Wing', type: 'surgery' },
-  { slug: 'pediatrics-ward', name: 'Pediatrics', type: 'pediatrics' },
-];
+const PRIMARY_VENUE = {
+  slug: 'metro-general-hospital',
+  name: 'Metro General Hospital & Trauma Center',
+  address: '500 Healthcare Parkway, Medical District',
+};
 
 export default function PublicReport({ onOpenSos }) {
   const navigate = useNavigate();
-  const [venues, setVenues] = useState([]);
-  const [selectedVenue, setSelectedVenue] = useState('');
+  const selectedVenue = PRIMARY_VENUE.slug;
 
   // Form Fields
   const [type, setType] = useState('MEDICAL');
@@ -49,39 +38,6 @@ export default function PublicReport({ onOpenSos }) {
 
   // Success Confirmation State
   const [createdIncident, setCreatedIncident] = useState(null);
-
-  useEffect(() => {
-    const loadVenues = async () => {
-      try {
-        const res = await venueApi.getVenues();
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setVenues(res.data);
-          setSelectedVenue(res.data[0].slug);
-          return;
-        }
-      } catch (err) {
-        // Fallback to presets
-      }
-      setVenues(FALLBACK_VENUES);
-      setSelectedVenue(FALLBACK_VENUES[0].slug);
-    };
-
-    loadVenues();
-  }, []);
-
-  const getVenueIcon = (vType, slug = '') => {
-    if (slug.includes('er') || vType === 'emergency')
-      return <Activity size={18} />;
-    if (slug.includes('icu') || vType === 'icu')
-      return <HeartPulse size={18} />;
-    if (slug.includes('clinic') || vType === 'clinic')
-      return <Stethoscope size={18} />;
-    if (slug.includes('surgery') || vType === 'surgery')
-      return <Syringe size={18} />;
-    if (slug.includes('ward') || vType === 'maternity' || vType === 'pediatrics')
-      return <Bed size={18} />;
-    return <Building size={18} />;
-  };
 
   const detectLocation = () => {
     if ('geolocation' in navigator) {
@@ -136,7 +92,7 @@ export default function PublicReport({ onOpenSos }) {
           type,
           location: location.trim(),
           venueSlug: selectedVenue,
-          venueName: venues.find((v) => v.slug === selectedVenue)?.name,
+          venueName: PRIMARY_VENUE.name,
         });
       }
 
@@ -242,49 +198,27 @@ export default function PublicReport({ onOpenSos }) {
       </div>
 
       <form onSubmit={submitReport} className="space-y-6">
-        {/* Venue Selector */}
-        <div className="space-y-3">
-          <label className="text-sm font-bold flex items-center gap-2 text-slate-700 dark:text-slate-300">
-            <MapPin size={17} className="text-blue-600 dark:text-blue-400" />
-            <span>Select Venue / Ward *</span>
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-            {venues.map((v) => {
-              const isSelected = selectedVenue === v.slug;
-              return (
-                <div
-                  key={v.slug}
-                  onClick={() => setSelectedVenue(v.slug)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      {getVenueIcon(v.type, v.slug)}
-                    </div>
-                    <span className="text-xs font-semibold leading-snug line-clamp-2">
-                      {v.name}
-                    </span>
-                  </div>
-
-                  {isSelected && (
-                    <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
-                      <Check size={12} strokeWidth={3} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* Facility Info Card */}
+        <div className="p-3.5 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/30 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Building size={20} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                Reporting Facility
+              </span>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                {PRIMARY_VENUE.name}
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {PRIMARY_VENUE.address}
+              </p>
+            </div>
           </div>
+          <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+            Active 24/7 Command
+          </span>
         </div>
 
         {/* Type & Severity */}

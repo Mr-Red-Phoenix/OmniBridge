@@ -6,9 +6,14 @@ import { toast } from 'react-toastify';
 import incidentApi from '../api/incidentApi';
 import { savePersonalLifeline } from '../utils/personalLifelineStorage';
 
-export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlug = '' }) {
+const PRIMARY_VENUE = {
+  slug: 'metro-general-hospital',
+  name: 'Metro General Hospital & Trauma Center',
+};
+
+export default function SosModal({ isOpen, onClose }) {
   const navigate = useNavigate();
-  const [selectedVenue, setSelectedVenue] = useState(defaultVenueSlug);
+  const selectedVenue = PRIMARY_VENUE.slug;
   const [location, setLocation] = useState('');
   const [type, setType] = useState('MEDICAL');
   const [notes, setNotes] = useState('');
@@ -17,14 +22,6 @@ export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlu
   const [coords, setCoords] = useState(null);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (defaultVenueSlug) {
-      setSelectedVenue(defaultVenueSlug);
-    } else if (venues.length > 0 && !selectedVenue) {
-      setSelectedVenue(venues[0].slug);
-    }
-  }, [defaultVenueSlug, venues, selectedVenue]);
 
   useEffect(() => {
     if (isOpen) {
@@ -54,9 +51,9 @@ export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlu
 
   const handleTriggerSos = async (e) => {
     e.preventDefault();
-    const venueSlug = selectedVenue || (venues[0] && venues[0].slug);
+    const venueSlug = selectedVenue;
     if (!venueSlug) {
-      toast.error('Please select a facility venue.');
+      toast.error('Facility not identified.');
       return;
     }
     if (!location.trim()) {
@@ -87,7 +84,7 @@ export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlu
           type,
           location: location.trim(),
           venueSlug,
-          venueName: venues.find((v) => v.slug === venueSlug)?.name,
+          venueName: PRIMARY_VENUE.name,
         });
       }
 
@@ -148,22 +145,9 @@ export default function SosModal({ isOpen, onClose, venues = [], defaultVenueSlu
         </div>
 
         <form onSubmit={handleTriggerSos} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 mb-1.5 block">
-              Target Venue Facility *
-            </label>
-            <select
-              value={selectedVenue}
-              onChange={(e) => setSelectedVenue(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-semibold focus:outline-none focus:border-red-500"
-              required
-            >
-              {venues.map((v) => (
-                <option key={v.slug} value={v.slug}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-500 dark:text-slate-400">Emergency Facility:</span>
+            <span className="font-bold text-slate-900 dark:text-white">{PRIMARY_VENUE.name}</span>
           </div>
 
           <div>

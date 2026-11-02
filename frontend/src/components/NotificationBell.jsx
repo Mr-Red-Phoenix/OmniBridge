@@ -20,10 +20,8 @@ import { useAuth } from '../context/AuthContext';
 import { getPersonalLifelines, removePersonalLifeline } from '../utils/personalLifelineStorage';
 
 export default function NotificationBell() {
-  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [venues, setVenues] = useState([]);
-  const [selectedVenue, setSelectedVenue] = useState('metro-general-hospital');
+  const selectedVenue = 'metro-general-hospital';
   const [alerts, setAlerts] = useState([]);
   const [personalLifelines, setPersonalLifelines] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -47,29 +45,8 @@ export default function NotificationBell() {
     };
   }, []);
 
-  // 1. Fetch available venues or default to user's venue
-  useEffect(() => {
-    venueApi
-      .getVenues()
-      .then((res) => {
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setVenues(res.data);
-          if (user?.venue?.slug) {
-            setSelectedVenue(user.venue.slug);
-          } else if (res.data[0]?.slug) {
-            setSelectedVenue(res.data[0].slug);
-          }
-        }
-      })
-      .catch(() => {
-        // Fallback default venue if offline
-        setVenues([{ slug: 'metro-general-hospital', name: 'Metro General Hospital' }]);
-      });
-  }, [user]);
-
-  // 2. Fetch broadcasts for the selected venue
-  const fetchBroadcasts = async (slug = selectedVenue) => {
-    if (!slug) return;
+  // 2. Fetch broadcasts for Metro General Hospital
+  const fetchBroadcasts = async () => {
     setLoading(true);
     try {
       const res = await guestApi.getVenueBroadcasts(slug);
@@ -198,24 +175,6 @@ export default function NotificationBell() {
                 <XClose size={15} />
               </button>
             </div>
-
-            {/* Venue Selector (if multiple venues exist) */}
-            {venues.length > 1 && (
-              <div className="px-3.5 py-2 bg-slate-50/50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 dark:text-slate-400 font-medium">Facility:</span>
-                <select
-                  value={selectedVenue}
-                  onChange={(e) => setSelectedVenue(e.target.value)}
-                  className="bg-transparent text-blue-600 dark:text-blue-400 font-semibold cursor-pointer outline-none text-right pr-1"
-                >
-                  {venues.map((v) => (
-                    <option key={v.slug} value={v.slug} className="dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             {/* Content List */}
             <div className="max-h-[380px] overflow-y-auto p-3 space-y-2.5">

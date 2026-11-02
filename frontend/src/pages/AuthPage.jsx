@@ -148,22 +148,12 @@ export default function AuthPage() {
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regVenueSlug, setRegVenueSlug] = useState('metro-general-hospital');
+  const regVenueSlug = 'metro-general-hospital';
   const [regRole, setRegRole] = useState('STAFF');
   const [regAdminKey, setRegAdminKey] = useState('');
   const [regOtp, setRegOtp] = useState('');
   const [regOtpSent, setRegOtpSent] = useState(false);
-  const [venues, setVenues] = useState([]);
   const [registering, setRegistering] = useState(false);
-
-  useEffect(() => {
-    venueApi.getVenues().then((res) => {
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        setVenues(res.data);
-        setRegVenueSlug(res.data[0].slug);
-      }
-    }).catch(() => {});
-  }, []);
 
   // Handle URL token if user clicked a link
   useEffect(() => {
@@ -589,25 +579,13 @@ export default function AuthPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Assigned Venue *
+                  Facility
                 </label>
-                <div className="relative">
-                  <select
-                    value={regVenueSlug}
-                    onChange={(e) => setRegVenueSlug(e.target.value)}
-                    className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all cursor-pointer shadow-sm truncate"
-                    required
-                  >
-                    {venues.map((v) => (
-                      <option key={v.slug} value={v.slug} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-2">
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <div className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold truncate shadow-xs">
+                  Metro General Hospital
                 </div>
               </div>
 
